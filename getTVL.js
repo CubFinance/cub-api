@@ -1,21 +1,22 @@
-import MultiCallAbi from "./abi/Multicall.json";
-import erc20 from "./abi/erc20.json";
-import BigNumber from "bignumber.js";
-import {ContractAddresses} from "./configs/ContractAddresses";
-import {Interface} from "@ethersproject/abi";
-import {farmsConfig} from "./configs/farms";
-import Web3 from "web3";
-import {TokenSymbols} from "./configs/TokenSymbols";
-import {failure, success} from "./response-lib";
+const MultiCallAbi = require("./abi/Multicall.json");
+const erc20 = require("./abi/erc20.json");
+const BigNumber = require("bignumber.js");
+const {ContractAddresses} = require("./configs/ContractAddresses");
+const {Interface} = require("@ethersproject/abi");
+const {farmsConfig} = require("./configs/farms");
+const Web3 = require("web3");
+const {TokenSymbols} = require("./configs/TokenSymbols");
+
+const CHAIN_ID = 56;
 
 const ZERO = new BigNumber(0);
-const web3 = new Web3(process.env.Provider);
+const web3 = new Web3('https://bsc-dataseed.binance.org');
 const multi = new web3.eth.Contract(MultiCallAbi, ContractAddresses.multiCall);
 
-export async function getTVL() {
+module.exports.getTVL = async function getTVL() {
     try {
         const farms = await fetchFarms();
-        const bnbbusdFarm = farms.find(f => f.pid === 2);
+        const bnbbusdFarm = farms.find(f => f.pid === 0);
         const bnbPrice = bnbbusdFarm.tokenPriceVsQuote ? new BigNumber(bnbbusdFarm.tokenPriceVsQuote) : ZERO;
 
         let value = new BigNumber(0);
@@ -31,9 +32,9 @@ export async function getTVL() {
                 value = value.plus(val);
             }
         }
-        return success(value.toFixed(2));
+        return value.toFixed(2);
     } catch (e) {
-        return failure(e);
+        return e;
     }
 }
 
@@ -45,8 +46,6 @@ async function multicall(abi, calls) {
 
     return res
 }
-
-const CHAIN_ID = 56;
 
 async function fetchFarms() {
     return await Promise.all(

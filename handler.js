@@ -1,33 +1,59 @@
-import {buildResponse, failure} from "./response-lib";
-import Web3 from "web3";
-import eggABI from "./abi/eggToken.json";
-import BigNumber from "bignumber.js";
+var express =  require("express");
+var app = express();
 
-const web3 = new Web3(process.env.Provider);
-const contract = new web3.eth.Contract(eggABI, process.env.EggAddress);
+const Web3 = require("web3");
+const eggABI = require("./abi/eggToken.json");
+const BigNumber = require("bignumber.js");
+const { getTVL } = require("./getTVL.js")
 
-export async function getTotalSupply() {
-    try {
-        const totalSupply = await contract.methods.totalSupply().call();
-        const burnt = await contract.methods.balanceOf(process.env.BurnAddress).call();
-        const circ = new BigNumber(totalSupply).minus(new BigNumber(burnt));
-        return success(circ.shiftedBy(-18).toNumber().toString());
-    } catch (e) {
-        return failure(e);
-    }
-}
+const web3 = new Web3('https://bsc-dataseed.binance.org/');
+const contract = new web3.eth.Contract(eggABI, '0x50d809c74e0b8e49e7b4c65bb3109abe3ff4c1c1');
 
-export async function getCirculatingSupply() {
-    try {
-        const totalSupply = await contract.methods.totalSupply().call();
-        const burnt = await contract.methods.balanceOf(process.env.BurnAddress).call();
-        const circ = new BigNumber(totalSupply).minus(new BigNumber(burnt));
-        return success(circ.shiftedBy(-18).toNumber().toString());
-    } catch (e) {
-        return failure(e);
-    }
-}
+app.get('/totalSupply', async (req, res) => {
+  try {
+      const totalSupply = await contract.methods.totalSupply().call();
+      const burnt = await contract.methods.balanceOf('0x000000000000000000000000000000000000dead').call();
+      const circ = new BigNumber(totalSupply).minus(new BigNumber(burnt));
+      res.json({
+        data: circ.shiftedBy(-18).toNumber().toString()
+      })
+  } catch (e) {
+    console.log(e)
+    res.json({
+      error: e
+    })
+  }
+})
 
-function success(body){
-    return buildResponse(200, body, {"Cache-Control": "max-age=500"});
-}
+app.get('/circulatingSupply', async (req, res) => {
+  try {
+      const totalSupply = await contract.methods.totalSupply().call();
+      const burnt = await contract.methods.balanceOf('0x000000000000000000000000000000000000dead').call();
+      const circ = new BigNumber(totalSupply).minus(new BigNumber(burnt));
+      return success(circ.shiftedBy(-18).toNumber().toString());
+      res.json({
+        data: circ.shiftedBy(-18).toNumber().toString()
+      })
+  } catch (e) {
+    console.log(e)
+    res.json({
+      error: e
+    })
+  }
+})
+
+app.get('/tvl', async (req, res) => {
+  try {
+      const TVL = await getTVL()
+      res.json({
+        data: TVL.toString()
+      })
+  } catch (e) {
+    console.log(e)
+    res.json({
+      error: e
+    })
+  }
+})
+
+app.listen(8080)
